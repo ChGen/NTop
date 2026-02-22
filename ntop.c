@@ -28,6 +28,7 @@
 #include "ntop.h"
 #include "util.h"
 #include "vi.h"
+#include "wmi.h"
 
 #ifndef NTOP_VER
 #define NTOP_VER "dev"
@@ -241,6 +242,7 @@ typedef struct process {
 	DWORD ThreadCount;
 	ULONGLONG UpTime;
 	TCHAR ExeName[MAX_PATH];
+	TCHAR CommandLine[WMI_COMMAND_LINE_SIZE];
 	DWORD ParentPID;
 	ULONGLONG DiskOperationsPrev;
 	ULONGLONG DiskOperations;
@@ -357,7 +359,7 @@ SORT_PROCESS_BY_INTEGER(DiskUsage);
 SORT_PROCESS_BY_STRING(ExeName, MAX_PATH);
 SORT_PROCESS_BY_STRING(UserName, UNLEN);
 
-static process_sort_type ProcessSortType = SORT_BY_ID;
+static process_sort_type ProcessSortType = SORT_BY_PROCESSOR_TIME;
 
 static TCHAR OSName[256];
 static DWORD CPUCoreCount;
@@ -688,6 +690,11 @@ static void PollProcessList(DWORD UpdateTime)
 
 		_tcsncpy_s(Process.ExeName, MAX_PATH, Entry.szExeFile, MAX_PATH);
 		_tcsncpy_s(Process.UserName, UNLEN, _T("SYSTEM"), UNLEN);
+
+#ifdef ENABLE_WMI
+		/* Get command line via WMI with service names */
+		GetProcessCommandLineWithServices(Entry.th32ProcessID, Process.CommandLine, WMI_COMMAND_LINE_SIZE);
+#endif
 
 		Process.Handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, Entry.th32ProcessID);
 		if(Process.Handle) {
@@ -1160,6 +1167,21 @@ static void WriteProcessInfo(const process *Process, BOOL Highlighted)
 
 		CharsWritten += ConPrintf(_T("%s"), Process->ExeName);
 	} else {
+#ifdef ENABLE_WMI
+		/* Show command line if available */
+		TCHAR *CMD = (Process->CommandLine[0] == '\0'? Process->ExeName: Process->CommandLine);
+		CharsWritten = ConPrintf(_T("\n%7u  %9s  %3u  %04.1f%%  %s  %4u  % 03.1f MB/s  %s  %s"),
+				Process->ID,
+				Process->UserName,
+				Process->BasePriority,
+				Process->PercentProcessorTime,
+				MemoryStr,
+				Process->ThreadCount,
+				ceil((double)Process->DiskUsage / 1000000.0 * 10.0) / 10.0,
+				UpTimeStr,
+				CMD
+			);
+#else
 		CharsWritten = ConPrintf(_T("\n%7u  %9s  %3u  %04.1f%%  %s  %4u  % 03.1f MB/s  %s  %s"),
 				Process->ID,
 				Process->UserName,
@@ -1171,6 +1193,7 @@ static void WriteProcessInfo(const process *Process, BOOL Highlighted)
 				UpTimeStr,
 				Process->ExeName
 				);
+#endif
 	}
 
 	if (InteractiveMode) {
@@ -1763,6 +1786,12 @@ int _tmain(int argc, TCHAR *argv[])
 
 	ViMessage = xcalloc(DEFAULT_STR_SIZE, 1);
 	ViInit();
+
+#ifdef ENABLE_WMI
+	if (!WmiInit())
+		return -1;
+	atexit(WmiCleanup);
+#endif
 
 	PollConsoleInfo();
 	PollInitialSystemInfo();
