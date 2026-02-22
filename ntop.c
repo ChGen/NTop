@@ -1834,7 +1834,7 @@ int _tmain(int argc, TCHAR *argv[])
 			SetColor(Config.FGHighlightColor);
 			CharsWritten += ConPrintf(_T("  Size: "));
 			SetColor(Config.FGColor);
-			CharsWritten += ConPrintf(_T("%d GB"), (int)TotalMemory/1000);
+			CharsWritten += ConPrintf(_T("%d GB"), (int)TotalMemory/1024);
 
 			for(; CharsWritten < Width; CharsWritten++) {
 				ConPutc(_T(' '));
