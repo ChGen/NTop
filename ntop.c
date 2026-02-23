@@ -1616,8 +1616,17 @@ static void ProcessInput(BOOL *Redraw)
 							ChangeProcessSortType(SORT_BY_USED_MEMORY);
 							*Redraw = TRUE;
 							break;
+						case 'C':
 						case 'P':
 							ChangeProcessSortType(SORT_BY_PROCESSOR_TIME);
+							*Redraw = TRUE;
+							break;
+						case 'D':
+							ChangeProcessSortType(SORT_BY_DISK_USAGE);
+							*Redraw = TRUE;
+							break;
+						case 'T':
+							ChangeProcessSortType(SORT_BY_UPTIME);
 							*Redraw = TRUE;
 							break;
 						case 'q':
