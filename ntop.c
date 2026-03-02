@@ -1167,33 +1167,22 @@ static void WriteProcessInfo(const process *Process, BOOL Highlighted)
 
 		CharsWritten += ConPrintf(_T("%s"), Process->ExeName);
 	} else {
+		LPCTSTR CMD = Process->ExeName;
 #ifdef ENABLE_WMI
-		/* Show command line if available */
-		TCHAR *CMD = (Process->CommandLine[0] == '\0'? Process->ExeName: Process->CommandLine);
+		if (Process->CommandLine[0] != '\0')
+			CMD = Process->CommandLine;
+#endif
 		CharsWritten = ConPrintf(_T("\n%7u  %9s  %3u  %04.1f%%  %s  %4u  % 03.1f MB/s  %s  %s"),
 				Process->ID,
 				Process->UserName,
 				Process->BasePriority,
-				Process->PercentProcessorTime,
+				Process->PercentProcessorTime * CPUCoreCount, // CPU usage looks bad without this scaling
 				MemoryStr,
 				Process->ThreadCount,
 				ceil((double)Process->DiskUsage / 1000000.0 * 10.0) / 10.0,
 				UpTimeStr,
 				CMD
 			);
-#else
-		CharsWritten = ConPrintf(_T("\n%7u  %9s  %3u  %04.1f%%  %s  %4u  % 03.1f MB/s  %s  %s"),
-				Process->ID,
-				Process->UserName,
-				Process->BasePriority,
-				Process->PercentProcessorTime,
-				MemoryStr,
-				Process->ThreadCount,
-				ceil((double)Process->DiskUsage / 1000000.0 * 10.0) / 10.0,
-				UpTimeStr,
-				Process->ExeName
-				);
-#endif
 	}
 
 	if (InteractiveMode) {
