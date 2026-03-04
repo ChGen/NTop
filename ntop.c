@@ -148,7 +148,7 @@ static void ParseConfigLine(char *Line)
 		Config.BGColor = Num;
 	} else if(_strcmpi(Key, "FGHighlightColor") == 0) {
 		Config.FGHighlightColor = Num;
-	} else if(_strcmpi(Key, "FGHighlightColor") == 0) {
+	} else if(_strcmpi(Key, "BGHighlightColor") == 0) {
 		Config.BGHighlightColor = Num;
 	} else if(_strcmpi(Key, "MenuBarColor") == 0) {
 		Config.MenuBarColor = Num;
