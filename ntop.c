@@ -287,7 +287,7 @@ static void ToggleTaggedProcess(DWORD ID)
 
 	if(TaggedProcessListCount >= TaggedProcessListSize) {
 		TaggedProcessListSize += PROCLIST_BUF_INCREASE;
-		TaggedProcessList = xrealloc(TaggedProcessList, PROCLIST_BUF_INCREASE * sizeof *TaggedProcessList);
+		TaggedProcessList = xrealloc(TaggedProcessList, TaggedProcessListSize * sizeof *TaggedProcessList);
 	}
 }
 
