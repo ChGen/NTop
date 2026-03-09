@@ -1,3 +1,17 @@
+
+## Personal NTop fork
+
+[![Latest Release](https://img.shields.io/github/release/ChGen/NTop.svg)](https://github.com/ChGen/NTop/releases/latest)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
+* command line & services info via WMI
+* more sorting keys (C - cores, D - disk, T - (up)time)
+* binary GBs for RAM
+* CPU usage percents scaled to 100% for 1 core (linux-like)
+
+<img width="1860" height="1057" alt="NTop" src="https://github.com/user-attachments/assets/5f1c44b8-d344-4744-b3b9-dbfb7ad08a55" />
+
+
 # NTop
 
 [![Latest Release](https://img.shields.io/github/release/Nuke928/NTop.svg)](https://github.com/Nuke928/NTop/releases/latest)
