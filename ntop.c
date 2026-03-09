@@ -28,6 +28,7 @@
 #include "ntop.h"
 #include "util.h"
 #include "vi.h"
+#include "wmi.h"
 
 #ifndef NTOP_VER
 #define NTOP_VER "dev"
@@ -147,7 +148,7 @@ static void ParseConfigLine(char *Line)
 		Config.BGColor = Num;
 	} else if(_strcmpi(Key, "FGHighlightColor") == 0) {
 		Config.FGHighlightColor = Num;
-	} else if(_strcmpi(Key, "FGHighlightColor") == 0) {
+	} else if(_strcmpi(Key, "BGHighlightColor") == 0) {
 		Config.BGHighlightColor = Num;
 	} else if(_strcmpi(Key, "MenuBarColor") == 0) {
 		Config.MenuBarColor = Num;
@@ -241,6 +242,7 @@ typedef struct process {
 	DWORD ThreadCount;
 	ULONGLONG UpTime;
 	TCHAR ExeName[MAX_PATH];
+	TCHAR CommandLine[WMI_COMMAND_LINE_SIZE];
 	DWORD ParentPID;
 	ULONGLONG DiskOperationsPrev;
 	ULONGLONG DiskOperations;
@@ -285,7 +287,7 @@ static void ToggleTaggedProcess(DWORD ID)
 
 	if(TaggedProcessListCount >= TaggedProcessListSize) {
 		TaggedProcessListSize += PROCLIST_BUF_INCREASE;
-		TaggedProcessList = xrealloc(TaggedProcessList, PROCLIST_BUF_INCREASE * sizeof *TaggedProcessList);
+		TaggedProcessList = xrealloc(TaggedProcessList, TaggedProcessListSize * sizeof *TaggedProcessList);
 	}
 }
 
@@ -357,7 +359,7 @@ SORT_PROCESS_BY_INTEGER(DiskUsage);
 SORT_PROCESS_BY_STRING(ExeName, MAX_PATH);
 SORT_PROCESS_BY_STRING(UserName, UNLEN);
 
-static process_sort_type ProcessSortType = SORT_BY_ID;
+static process_sort_type ProcessSortType = SORT_BY_PROCESSOR_TIME;
 
 static TCHAR OSName[256];
 static DWORD CPUCoreCount;
@@ -688,6 +690,11 @@ static void PollProcessList(DWORD UpdateTime)
 
 		_tcsncpy_s(Process.ExeName, MAX_PATH, Entry.szExeFile, MAX_PATH);
 		_tcsncpy_s(Process.UserName, UNLEN, _T("SYSTEM"), UNLEN);
+
+#ifdef ENABLE_WMI
+		/* Get command line via WMI with service names */
+		GetProcessCommandLineWithServices(Entry.th32ProcessID, Process.CommandLine, WMI_COMMAND_LINE_SIZE);
+#endif
 
 		Process.Handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, Entry.th32ProcessID);
 		if(Process.Handle) {
@@ -1160,17 +1167,22 @@ static void WriteProcessInfo(const process *Process, BOOL Highlighted)
 
 		CharsWritten += ConPrintf(_T("%s"), Process->ExeName);
 	} else {
+		LPCTSTR CMD = Process->ExeName;
+#ifdef ENABLE_WMI
+		if (Process->CommandLine[0] != '\0')
+			CMD = Process->CommandLine;
+#endif
 		CharsWritten = ConPrintf(_T("\n%7u  %9s  %3u  %04.1f%%  %s  %4u  % 03.1f MB/s  %s  %s"),
 				Process->ID,
 				Process->UserName,
 				Process->BasePriority,
-				Process->PercentProcessorTime,
+				Process->PercentProcessorTime * CPUCoreCount, // CPU usage looks bad without this scaling
 				MemoryStr,
 				Process->ThreadCount,
 				ceil((double)Process->DiskUsage / 1000000.0 * 10.0) / 10.0,
 				UpTimeStr,
-				Process->ExeName
-				);
+				CMD
+			);
 	}
 
 	if (InteractiveMode) {
@@ -1616,8 +1628,17 @@ static void ProcessInput(BOOL *Redraw)
 							ChangeProcessSortType(SORT_BY_USED_MEMORY);
 							*Redraw = TRUE;
 							break;
+						case 'C':
 						case 'P':
 							ChangeProcessSortType(SORT_BY_PROCESSOR_TIME);
+							*Redraw = TRUE;
+							break;
+						case 'D':
+							ChangeProcessSortType(SORT_BY_DISK_USAGE);
+							*Redraw = TRUE;
+							break;
+						case 'T':
+							ChangeProcessSortType(SORT_BY_UPTIME);
 							*Redraw = TRUE;
 							break;
 						case 'q':
@@ -1755,6 +1776,12 @@ int _tmain(int argc, TCHAR *argv[])
 	ViMessage = xcalloc(DEFAULT_STR_SIZE, 1);
 	ViInit();
 
+#ifdef ENABLE_WMI
+	if (!WmiInit())
+		return -1;
+	atexit(WmiCleanup);
+#endif
+
 	PollConsoleInfo();
 	PollInitialSystemInfo();
 	PollSystemInfo();
@@ -1834,7 +1861,7 @@ int _tmain(int argc, TCHAR *argv[])
 			SetColor(Config.FGHighlightColor);
 			CharsWritten += ConPrintf(_T("  Size: "));
 			SetColor(Config.FGColor);
-			CharsWritten += ConPrintf(_T("%d GB"), (int)TotalMemory/1000);
+			CharsWritten += ConPrintf(_T("%d GB"), (int)TotalMemory/1024);
 
 			for(; CharsWritten < Width; CharsWritten++) {
 				ConPutc(_T(' '));
