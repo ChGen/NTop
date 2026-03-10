@@ -7,7 +7,7 @@
 * command line & services info via WMI
 * more sorting keys (C - cores, D - disk, T - (up)time)
 * binary GBs for RAM
-* CPU usage percents scaled to 100% for 1 core (linux-like)
+* CPU usage percents scaled to 100% per 1 core (linux-like)
 
 <img width="1860" height="1057" alt="NTop" src="https://github.com/user-attachments/assets/5f1c44b8-d344-4744-b3b9-dbfb7ad08a55" />
 
